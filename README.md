@@ -1,7 +1,5 @@
 # WebScore - Website Legitimacy Checker
 
-![WebScore](https://placehold.co/800x400/111827/ffffff?text=WebScore%20Screenshot)
-
 <p align="center">
   <img alt="License" src="https://img.shields.io/badge/License-Apache_2.0-blue.svg"/>
   <img alt="Open Source" src="https://img.shields.io/badge/Open%20Source-❤️-brightgreen"/>
