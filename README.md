@@ -3,7 +3,7 @@
 ![WebScore](https://placehold.co/800x400/111827/ffffff?text=WebScore%20Screenshot)
 
 <p align="center">
-  <img alt="License" src="https://img.shields.io/badge/License-MIT-yellow.svg"/>
+  <img alt="License" src="https://img.shields.io/badge/License-Apache_2.0-blue.svg"/>
   <img alt="Open Source" src="https://img.shields.io/badge/Open%20Source-❤️-brightgreen"/>
 </p>
 
@@ -89,7 +89,7 @@ This tool is intended for educational purposes and as a preliminary check. It is
 
 ## 📄 License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgements
 
