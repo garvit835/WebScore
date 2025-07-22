@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSentry - Website Legitimacy Checker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Simple spinner animation */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #09f;
+            animation: spin 1s ease infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-2xl mx-auto">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-white mb-2">WebSentry</h1>
+            <p class="text-lg text-gray-400">Enter a website URL to check its legitimacy.</p>
+        </header>
+
+        <main>
+            <div class="bg-gray-800 p-6 rounded-xl shadow-2xl">
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <input type="text" id="urlInput" placeholder="e.g., example.com" class="flex-grow bg-gray-700 text-white placeholder-gray-400 border-2 border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                    <button id="scanBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="mr-2" viewBox="0 0 16 16">
+                            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                        </svg>
+                        Scan Website
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="resultsSection" class="mt-8 hidden">
+                <!-- Loading Spinner -->
+                <div id="loading" class="text-center p-8 hidden">
+                    <div class="spinner mx-auto"></div>
+                    <p class="mt-4 text-gray-400">Analyzing... This may take a moment.</p>
+                </div>
+
+                <!-- Error Message -->
+                <div id="errorMessage" class="hidden bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg" role="alert">
+                    <strong class="font-bold">Error:</strong>
+                    <span class="block sm:inline" id="errorText"></span>
+                </div>
+
+                <!-- Report Card -->
+                <div id="reportCard" class="hidden bg-gray-800 rounded-xl shadow-2xl overflow-hidden">
+                    <div id="reportHeader" class="p-6">
+                        <h2 class="text-2xl font-bold" id="verdictTitle"></h2>
+                        <p class="text-gray-400" id="verdictSubtitle"></p>
+                    </div>
+                    <div class="bg-gray-800/50 px-6 py-4">
+                        <h3 class="text-lg font-semibold text-white mb-4 border-b border-gray-700 pb-2">Detailed Report</h3>
+                        <ul class="space-y-3">
+                            <li class="flex justify-between items-center">
+                                <span class="font-medium text-gray-300">URL Scanned</span>
+                                <span id="scannedUrl" class="font-mono bg-gray-700 px-2 py-1 rounded-md text-sm"></span>
+                            </li>
+                            <li class="flex justify-between items-center">
+                                <span class="font-medium text-gray-300">Uses HTTPS</span>
+                                <span id="httpsResult" class="font-semibold"></span>
+                            </li>
+                            <li class="flex justify-between items-center">
+                                <span class="font-medium text-gray-300">Domain Age</span>
+                                <span id="domainAgeResult" class="font-semibold"></span>
+                            </li>
+                            <li class="flex justify-between items-center">
+                                <span class="font-medium text-gray-300">Wayback History</span>
+                                <span id="waybackResult" class="font-semibold"></span>
+                            </li>
+                             <li class="flex justify-between items-center">
+                                <span class="font-medium text-gray-300">Google Safe Browsing</span>
+                                <span id="safeBrowsingResult" class="font-semibold"></span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="text-center mt-12 text-gray-500 text-sm">
+            <p>Disclaimer: This tool performs basic checks and is not a guarantee of a website's safety. Always use caution.</p>
+            <p>For a more robust check, you must use multiple tools and your own judgment.</p>
+        </footer>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        // API Keys have been added below.
+        const GOOGLE_SAFE_BROWSING_API_KEY = 'AIzaSyBsc4xAcguT7dlNfvaY4zrF-ySIHflqk1o';
+        const WHOIS_API_KEY = 'at_f4HH8R3ixtBzNMkbxUWsJjKBHgtGo';
+
+        // --- DOM ELEMENTS ---
+        const urlInput = document.getElementById('urlInput');
+        const scanBtn = document.getElementById('scanBtn');
+        const resultsSection = document.getElementById('resultsSection');
+        const loading = document.getElementById('loading');
+        const errorMessage = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
+        const reportCard = document.getElementById('reportCard');
+        const reportHeader = document.getElementById('reportHeader');
+
+        // --- EVENT LISTENERS ---
+        scanBtn.addEventListener('click', scanUrl);
+        urlInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                scanUrl();
+            }
+        });
+
+        // --- MAIN SCAN FUNCTION ---
+        async function scanUrl() {
+            let url = urlInput.value.trim();
+            if (!url) {
+                showError("Please enter a URL.");
+                return;
+            }
+
+            // Normalize URL: remove protocol and www for consistency
+            let domain = url.replace(/^(https?:\/\/)?(www\.)?/, "").split('/')[0];
+
+            // Show loading state and clear previous results
+            resultsSection.style.display = 'block';
+            loading.style.display = 'block';
+            reportCard.style.display = 'none';
+            errorMessage.style.display = 'none';
+
+            if (!GOOGLE_SAFE_BROWSING_API_KEY || !WHOIS_API_KEY) {
+                showError("API keys are not configured. Please add them in the script section.");
+                loading.style.display = 'none';
+                return;
+            }
+
+            try {
+                // Run all checks in parallel
+                const [
+                    httpsCheck,
+                    domainInfo,
+                    waybackHistory,
+                    safeBrowsingStatus
+                ] = await Promise.all([
+                    checkHttps(url),
+                    getDomainAge(domain),
+                    getWaybackHistory(domain),
+                    checkSafeBrowsing(url)
+                ]);
+                
+                // Process results and display the report
+                displayReport({
+                    domain,
+                    httpsCheck,
+                    domainInfo,
+                    waybackHistory,
+                    safeBrowsingStatus
+                });
+
+            } catch (error) {
+                console.error("An error occurred during scanning:", error);
+                showError(error.message || "An unknown error occurred. Check the console for details.");
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        // --- API CHECK FUNCTIONS ---
+
+        /**
+         * Checks if the site is accessible via HTTPS.
+         * This is a very basic check.
+         */
+        function checkHttps(url) {
+            // A simple check based on the URL string itself.
+            // A more robust check would involve a fetch request, but can be blocked by CORS.
+            if (!url.startsWith('http')) {
+                url = 'https://' + url;
+            }
+            return url.startsWith('https://');
+        }
+
+        /**
+         * Fetches domain registration info using WhoisXMLAPI.
+         */
+        async function getDomainAge(domain) {
+            const apiUrl = `https://www.whoisxmlapi.com/whoisserver/WhoisService?apiKey=${WHOIS_API_KEY}&domainName=${domain}&outputFormat=JSON`;
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    throw new Error(`Whois API request failed with status ${response.status}`);
+                }
+                const data = await response.json();
+
+                if (data.WhoisRecord && data.WhoisRecord.createdDate) {
+                    const createdDate = new Date(data.WhoisRecord.createdDate);
+                    const now = new Date();
+                    const ageInMs = now - createdDate;
+                    const ageInDays = Math.floor(ageInMs / (1000 * 60 * 60 * 24));
+                    return { ageInDays, createdDate: createdDate.toLocaleDateString() };
+                } else if (data.ErrorMessage) {
+                     throw new Error(`Whois Error: ${data.ErrorMessage.msg}`);
+                }
+                return { ageInDays: null, createdDate: 'Not Found' };
+            } catch (error) {
+                 console.error("Whois API Error:", error);
+                 // Return a non-blocking result
+                 return { ageInDays: null, createdDate: 'Error Fetching' };
+            }
+        }
+
+        /**
+         * Checks the Internet Archive's Wayback Machine for history.
+         */
+        async function getWaybackHistory(domain) {
+            const apiUrl = `https://archive.org/wayback/available?url=${domain}`;
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                if (data.archived_snapshots && data.archived_snapshots.closest) {
+                    return { 
+                        available: true, 
+                        firstSeen: new Date(data.archived_snapshots.closest.timestamp.substring(0, 8)).toLocaleDateString() 
+                    };
+                }
+                return { available: false, firstSeen: 'No History Found' };
+            } catch (error) {
+                console.error("Wayback API Error:", error);
+                return { available: false, firstSeen: 'Error Fetching' };
+            }
+        }
+
+        /**
+         * Checks the URL against Google's Safe Browsing API.
+         */
+        async function checkSafeBrowsing(url) {
+            const apiUrl = `https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${GOOGLE_SAFE_BROWSING_API_KEY}`;
+            const payload = {
+                client: {
+                    clientId: "websentry-checker",
+                    clientVersion: "1.0.0"
+                },
+                threatInfo: {
+                    threatTypes: ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE", "POTENTIALLY_HARMFUL_APPLICATION"],
+                    platformTypes: ["ANY_PLATFORM"],
+                    threatEntryTypes: ["URL"],
+                    threatEntries: [{ url: url }]
+                }
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                if (data.matches && data.matches.length > 0) {
+                    return { isSafe: false, threatType: data.matches[0].threatType };
+                }
+                return { isSafe: true, threatType: 'None' };
+            } catch (error) {
+                console.error("Safe Browsing API Error:", error);
+                // Fail safe: assume it's safe if the API fails, but log it.
+                return { isSafe: true, threatType: 'API Error' };
+            }
+        }
+
+
+        // --- UI UPDATE FUNCTIONS ---
+
+        /**
+         * Displays an error message to the user.
+         */
+        function showError(message) {
+            resultsSection.style.display = 'block';
+            errorMessage.style.display = 'block';
+            reportCard.style.display = 'none';
+            errorText.textContent = message;
+        }
+
+        /**
+         * Calculates score and displays the final report.
+         */
+        function displayReport(results) {
+            // Populate basic info
+            document.getElementById('scannedUrl').textContent = results.domain;
+            
+            // Scoring logic
+            let score = 100;
+            let issues = [];
+
+            // 1. HTTPS Check
+            if (results.httpsCheck) {
+                document.getElementById('httpsResult').innerHTML = '<span class="text-green-400">Yes</span>';
+            } else {
+                document.getElementById('httpsResult').innerHTML = '<span class="text-yellow-400">No</span>';
+                score -= 15;
+                issues.push("Site does not use a secure HTTPS connection.");
+            }
+
+            // 2. Domain Age Check
+            const ageInDays = results.domainInfo.ageInDays;
+            document.getElementById('domainAgeResult').textContent = results.domainInfo.createdDate;
+            if (ageInDays === null) {
+                score -= 10; // Penalty for not being able to verify
+            } else if (ageInDays < 180) {
+                score -= 40;
+                issues.push(`Domain is very new (less than 6 months old).`);
+            } else if (ageInDays < 365) {
+                score -= 20;
+                issues.push("Domain is less than a year old.");
+            }
+
+            // 3. Wayback History Check
+            document.getElementById('waybackResult').textContent = results.waybackHistory.firstSeen;
+            if (!results.waybackHistory.available) {
+                score -= 25;
+                issues.push("No history found on the Internet Archive.");
+            }
+
+            // 4. Safe Browsing Check (Most Important)
+            if (!results.safeBrowsingStatus.isSafe) {
+                document.getElementById('safeBrowsingResult').innerHTML = `<span class="text-red-500 font-bold">DANGEROUS</span>`;
+                score = 0; // Immediate failure
+                issues.push(`Flagged by Google Safe Browsing for ${results.safeBrowsingStatus.threatType}.`);
+            } else if (results.safeBrowsingStatus.threatType === 'API Error') {
+                 document.getElementById('safeBrowsingResult').innerHTML = `<span class="text-yellow-400">Unknown</span>`;
+                 score -= 5; // Small penalty for uncertainty
+            } else {
+                document.getElementById('safeBrowsingResult').innerHTML = `<span class="text-green-400">Clean</span>`;
+            }
+
+            // Determine final verdict
+            let verdictTitle, verdictSubtitle, headerClass;
+            if (score <= 40) {
+                verdictTitle = "High Risk ❌";
+                verdictSubtitle = "This website has multiple red flags. Proceed with extreme caution.";
+                headerClass = "bg-red-800/50";
+            } else if (score <= 70) {
+                verdictTitle = "Be Cautious ⚠️";
+                verdictSubtitle = "This website has some suspicious signs. Verify its identity before using.";
+                headerClass = "bg-yellow-800/50";
+            } else {
+                verdictTitle = "Looks Safe ✅";
+                verdictSubtitle = "Our basic checks did not find any major red flags.";
+                headerClass = "bg-green-800/50";
+            }
+
+            // Update UI with verdict
+            document.getElementById('verdictTitle').textContent = verdictTitle;
+            document.getElementById('verdictSubtitle').textContent = verdictSubtitle;
+            reportHeader.className = `p-6 ${headerClass}`;
+
+            // Show the report card
+            reportCard.style.display = 'block';
+        }
+
+    </script>
+</body>
+</html>
